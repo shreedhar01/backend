@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "i am learning production grade backend",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -10,5 +11,11 @@
     "node"
   ],
   "author": "shreedhar kala magar",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7"
+  }
 }
