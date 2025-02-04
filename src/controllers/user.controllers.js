@@ -23,21 +23,25 @@ const registerUser = asyncHandler(async function (req, res, next) {
     const userExist = await User.findOne({
         $or: [{ userName }, { email }]
     })
-    if(userExist){
+    if (userExist) {
         throw new ApiError(409, "user already exists")
     }
 
-    //check for files
-    const avatarLocalPath = req?.files?.avatar?.[0]?.path
+    // Add debug logging
+    console.log("Request body:", req.body);
+    console.log("Request files:", req.files);
+
+    // Fix file path check
+    const avatarLocalPath = req.files?.avatar[0]?.path;
     if (!avatarLocalPath) {
-        throw new ApiError(400, "Image path not found")
+        throw new ApiError(400, "Avatar file is required")
     }
 
     const coverImageLocalPath = req?.files?.coverImage[0]?.path
 
     //upload on cloudinary
     const avatarCloudPath = await uploadOnCloudinary(avatarLocalPath)
-    if (!avatarCloud) {
+    if (!avatarCloudPath) {
         throw new ApiError(500, "Avatar upload failed")
     }
     const coverImageCloudPath = coverImageLocalPath
