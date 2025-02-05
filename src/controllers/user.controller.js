@@ -5,11 +5,12 @@ import { User } from "../models/user.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken"
 
-const generateAccessAndRefreshToken = asyncHandler(async (validUserId) => {
+const generateAccessAndRefreshToken = async (validUserId) => {
     try {
         const validUser = await User.findById(validUserId)
-        const accessToken = await validUser.generateAccessToken()
-        const refreshToken = await validUser.generateRefreshToken()
+        const accessToken = validUser.generateAccessToken()
+        const refreshToken = validUser.generateRefreshToken()
+        
 
         validUser.refreshToken = refreshToken
         await validUser.save({ validateBeforeSave: false })
@@ -19,7 +20,7 @@ const generateAccessAndRefreshToken = asyncHandler(async (validUserId) => {
         console.log("Error :: err while generating access and refresh token: ", error);
         throw new ApiError(500, "Something went wrong while generating access and refresh token")
     }
-})
+}
 
 const registerUser = asyncHandler(async function (req, res, next) {
     //take data from frontend
@@ -45,8 +46,8 @@ const registerUser = asyncHandler(async function (req, res, next) {
     }
 
     // Add debug logging
-    console.log("Request body:", req.body);
-    console.log("Request files:", req.files);
+    // console.log("Request body:", req.body);
+    // console.log("Request files:", req.files);
 
     // Fix file path check
     const avatarLocalPath = req.files?.avatar[0]?.path;
@@ -94,7 +95,11 @@ const loginUser = asyncHandler(async (req, res, next) => {
     //attage access and refresh token to cookie
     //send cookie
 
+    console.log(req.body);
+    
     const { userName, email, password } = req.body
+    console.log("userName: ", userName);
+    
     if (!(userName || email)) {
         throw new ApiError(400, "Need userName or Email requires")
     }
@@ -105,7 +110,7 @@ const loginUser = asyncHandler(async (req, res, next) => {
     if (!validUser) {
         throw new ApiError(400, "Enter a valid username or email")
     }
-    const validUserPassword = await User.isPasswordCorrect(password)
+    const validUserPassword = await validUser.isPasswordCorrect(password)
     if (!validUserPassword) {
         throw new ApiError(400, "Enter a correct password")
     }
@@ -124,8 +129,8 @@ const loginUser = asyncHandler(async (req, res, next) => {
 
     return res
         .status(200)
-        .cookies("accessToken", accessToken, options)
-        .cookies("refreshToken", refreshToken, options)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
         .json(
             new ApiResponse(200, {
                 user: validUserAfterRefreshTokenAdded, refreshToken, accessToken
