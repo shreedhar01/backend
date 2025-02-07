@@ -10,7 +10,7 @@ const generateAccessAndRefreshToken = async (validUserId) => {
         const validUser = await User.findById(validUserId)
         const accessToken = validUser.generateAccessToken()
         const refreshToken = validUser.generateRefreshToken()
-        
+
 
         validUser.refreshToken = refreshToken
         await validUser.save({ validateBeforeSave: false })
@@ -95,11 +95,11 @@ const loginUser = asyncHandler(async (req, res, next) => {
     //attage access and refresh token to cookie
     //send cookie
 
-    console.log(req.body);
-    
+    // console.log(req.body);
+
     const { userName, email, password } = req.body
-    console.log("userName: ", userName);
-    
+    // console.log("userName: ", userName);
+
     if (!(userName || email)) {
         throw new ApiError(400, "Need userName or Email requires")
     }
@@ -199,9 +199,144 @@ const refreshAccessToken = asyncHandler(async (req, res, next) => {
     }
 })
 
+const changeCurrentPassword = asyncHandler(async (req, res, next) => {
+    const { oldPassword, newPassword } = req.body
+    const userFromDb = await User.findById(req.user?._id)
+    if (!userFromDb) {
+        throw new ApiError(500, "Error while getting user from Db")
+    }
+
+    const validPassword = await userFromDb.isPasswordCorrect(oldPassword)
+    if (!validPassword) {
+        throw new ApiError(400, "Not a Valid Password")
+    }
+
+    userFromDb.password = newPassword
+    await userFromDb.save({ validateBeforeSave: false })
+
+    return res.status(200)
+        .json(
+            new ApiResponse(200, {}, "password updated successful")
+        )
+})
+
+const getCurrentUser = asyncHandler(async (req, res, next) => {
+    return res.status(200).json(
+        new ApiResponse(200, req.user, "user fetched successfully")
+    )
+})
+
+const updateAccountDetails = asyncHandler(async (req, res, next)=>{
+    const {fullName, email} = req.body
+    
+    if(!(fullName || email)){
+        throw new ApiError(400,"To change AccoutnDetails you must provide any one field")
+    }
+
+    const validUser = await User.findByIdAndUpdate(
+        validUser._id,
+        {
+            $set:{
+                fullName,
+                email
+            }
+        },
+        {new: true}
+    ).select("-password -refreshToken")
+    if(!validUser){
+        throw new ApiError(400,"Not a valid user")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            validUser,
+            "Detail update successfully"
+        )
+    )
+})
+
+const updateUserAvatar = asyncHandler(async (req, res, next)=>{
+    const avatarLocalPath = req.files?.path
+    if(!avatarLocalPath){
+        throw new ApiError(400, "There is not a avatarLocalPath")
+    }
+
+    const avatar = await uploadOnCloudinary(avatarLocalPath)
+    if(!avatar){
+        throw new ApiError(400, "Error while uploading to cloudinary")
+    }
+    const validUser = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set:{
+                avatar: validUser.url
+            }
+        },
+        {new: true}
+    ).select("-password")
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            validUser,
+            "Avatar image update successfully"
+        )
+    )
+})
+
+const updateUserCoverImage = asyncHandler(async (req, res, next)=>{
+    const coverImageLocalPath = req.files?.path
+    if(!coverImageLocalPath){
+        throw new ApiError(400, "There is not a avatarLocalPath")
+    }
+
+    const avatar = await uploadOnCloudinary(coverImageLocalPath)
+    if(!avatar){
+        throw new ApiError(400, "Error while uploading to cloudinary")
+    }
+    const validUser = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set:{
+                coverImage: validUser.url
+            }
+        },
+        {new: true}
+    ).select("-password")
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            validUser,
+            "cover image update successfully"
+        )
+    )
+})
+
+const getUserChannelProfile = asyncHandler(async (req, res, next)=>{
+
+})
+const getWatchHistory = asyncHandler(async (req, res, next)=>{
+
+})
+
 export {
     registerUser,
     loginUser,
     logoutUser,
-    refreshAccessToken
+    refreshAccessToken,
+    changeCurrentPassword,
+    getCurrentUser,
+    updateAccountDetails,
+    updateUserAvatar,
+    updateUserCoverImage,
+    getUserChannelProfile,
+    getWatchHistory
 }
