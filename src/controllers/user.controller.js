@@ -226,104 +226,167 @@ const getCurrentUser = asyncHandler(async (req, res, next) => {
     )
 })
 
-const updateAccountDetails = asyncHandler(async (req, res, next)=>{
-    const {fullName, email} = req.body
-    
-    if(!(fullName || email)){
-        throw new ApiError(400,"To change AccoutnDetails you must provide any one field")
+const updateAccountDetails = asyncHandler(async (req, res, next) => {
+    const { fullName, email } = req.body
+
+    if (!(fullName || email)) {
+        throw new ApiError(400, "To change AccoutnDetails you must provide any one field")
     }
 
     const validUser = await User.findByIdAndUpdate(
         validUser._id,
         {
-            $set:{
+            $set: {
                 fullName,
                 email
             }
         },
-        {new: true}
+        { new: true }
     ).select("-password -refreshToken")
-    if(!validUser){
-        throw new ApiError(400,"Not a valid user")
+    if (!validUser) {
+        throw new ApiError(400, "Not a valid user")
     }
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(
-            200,
-            validUser,
-            "Detail update successfully"
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                validUser,
+                "Detail update successfully"
+            )
         )
-    )
 })
 
-const updateUserAvatar = asyncHandler(async (req, res, next)=>{
+const updateUserAvatar = asyncHandler(async (req, res, next) => {
     const avatarLocalPath = req.files?.path
-    if(!avatarLocalPath){
+    if (!avatarLocalPath) {
         throw new ApiError(400, "There is not a avatarLocalPath")
     }
 
     const avatar = await uploadOnCloudinary(avatarLocalPath)
-    if(!avatar){
+    if (!avatar) {
         throw new ApiError(400, "Error while uploading to cloudinary")
     }
     const validUser = await User.findByIdAndUpdate(
         req.user?._id,
         {
-            $set:{
+            $set: {
                 avatar: validUser.url
             }
         },
-        {new: true}
+        { new: true }
     ).select("-password")
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(
-            200,
-            validUser,
-            "Avatar image update successfully"
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                validUser,
+                "Avatar image update successfully"
+            )
         )
-    )
 })
 
-const updateUserCoverImage = asyncHandler(async (req, res, next)=>{
+const updateUserCoverImage = asyncHandler(async (req, res, next) => {
     const coverImageLocalPath = req.files?.path
-    if(!coverImageLocalPath){
+    if (!coverImageLocalPath) {
         throw new ApiError(400, "There is not a avatarLocalPath")
     }
 
     const avatar = await uploadOnCloudinary(coverImageLocalPath)
-    if(!avatar){
+    if (!avatar) {
         throw new ApiError(400, "Error while uploading to cloudinary")
     }
     const validUser = await User.findByIdAndUpdate(
         req.user?._id,
         {
-            $set:{
+            $set: {
                 coverImage: validUser.url
             }
         },
-        {new: true}
+        { new: true }
     ).select("-password")
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(
-            200,
-            validUser,
-            "cover image update successfully"
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                validUser,
+                "cover image update successfully"
+            )
         )
+})
+
+const getUserChannelProfile = asyncHandler(async (req, res, next) => {
+    const { userName } = req.params
+    if (!userName) {
+        throw new ApiError(400, "user not found")
+    }
+
+    const channel = await User.aggregate([
+        {
+            $match: { userName: userName?.trim() }
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+                as: "follower",
+                localField: "_id",
+                foreignField: "subscriber"
+            }
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+                as: "followed",
+                localField: "_id",
+                foreignField: "channel",
+            }
+        },
+        {
+            $addFields: {
+                countFollowers: {
+                    $size: "$follower"
+                },
+                countFollowed: {
+                    $size: "$followed"
+                },
+                isFollowed: {
+                    $cond: {
+                        if: { $in: [req.user?._id === "$follower.subscriber"] },
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                fullName: 1,
+                userName: 1,
+                countFollowed: 1,
+                countFollowers: 1,
+                isFollowed: 1,
+                avatar: 1,
+                coverImage: 1,
+                email: 1
+            }
+        }
+    ])
+    if(!channel.length){
+        throw new ApiError(400,"Error while getting channel")
+    }
+
+    return res.status(200)
+    .json(
+        new ApiResponse(200, channel[0], "user data fetch successfully")
     )
 })
 
-const getUserChannelProfile = asyncHandler(async (req, res, next)=>{
-
-})
-const getWatchHistory = asyncHandler(async (req, res, next)=>{
+const getWatchHistory = asyncHandler(async (req, res, next) => {
 
 })
 
