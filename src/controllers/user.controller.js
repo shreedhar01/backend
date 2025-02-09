@@ -235,7 +235,7 @@ const updateAccountDetails = asyncHandler(async (req, res, next) => {
     }
 
     const validUser = await User.findByIdAndUpdate(
-        validUser._id,
+        req.user?._id,
         {
             $set: {
                 fullName,
@@ -260,7 +260,7 @@ const updateAccountDetails = asyncHandler(async (req, res, next) => {
 })
 
 const updateUserAvatar = asyncHandler(async (req, res, next) => {
-    const avatarLocalPath = req.files?.path
+    const avatarLocalPath = req.file?.path
     if (!avatarLocalPath) {
         throw new ApiError(400, "There is not a avatarLocalPath")
     }
@@ -273,7 +273,7 @@ const updateUserAvatar = asyncHandler(async (req, res, next) => {
         req.user?._id,
         {
             $set: {
-                avatar: validUser.url
+                avatar: avatar.url
             }
         },
         { new: true }
@@ -291,7 +291,7 @@ const updateUserAvatar = asyncHandler(async (req, res, next) => {
 })
 
 const updateUserCoverImage = asyncHandler(async (req, res, next) => {
-    const coverImageLocalPath = req.files?.path
+    const coverImageLocalPath = req.file?.path
     if (!coverImageLocalPath) {
         throw new ApiError(400, "There is not a avatarLocalPath")
     }
@@ -304,7 +304,7 @@ const updateUserCoverImage = asyncHandler(async (req, res, next) => {
         req.user?._id,
         {
             $set: {
-                coverImage: validUser.url
+                coverImage: avatar.url
             }
         },
         { new: true }
@@ -357,7 +357,7 @@ const getUserChannelProfile = asyncHandler(async (req, res, next) => {
                 },
                 isFollowed: {
                     $cond: {
-                        if: { $in: [req.user?._id === "$follower.subscriber"] },
+                        if: { $in: [req.user?._id, "$follower.subscriber"] },
                         then: true,
                         else: false
                     }
@@ -400,27 +400,27 @@ const getWatchHistory = asyncHandler(async (req, res, next) => {
                 as: "history",
                 localField: "watchHistory",
                 foreignField: "_id",
-                pipeline:[
+                pipeline: [
                     {
-                        $lookup:{
+                        $lookup: {
                             from: "users",
                             as: "getusers",
                             localField: "owner",
-                            foreignField: "_id"
-                        },
-                        pipeline:[
-                            {
-                                $project:{
-                                    fullName: 1,
-                                    avatar: 1,
-                                    userName: 1,
+                            foreignField: "_id",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        fullName: 1,
+                                        avatar: 1,
+                                        userName: 1,
+                                    }
                                 }
-                            }
-                        ]
+                            ]
+                        },
                     },
                     {
-                        $addFields:{
-                            owner:{
+                        $addFields: {
+                            owner: {
                                 $first: "$getusers"
                             }
                         }
@@ -430,7 +430,7 @@ const getWatchHistory = asyncHandler(async (req, res, next) => {
         }
     ])
 
-    retrun res.status(200).json(
+    return res.status(200).json(
         new ApiResponse(200, history[0].watchHistory, "watch history is fetch successfully")
     )
 })
