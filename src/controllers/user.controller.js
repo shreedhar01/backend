@@ -4,6 +4,7 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { User } from "../models/user.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken"
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshToken = async (validUserId) => {
     try {
@@ -376,18 +377,62 @@ const getUserChannelProfile = asyncHandler(async (req, res, next) => {
             }
         }
     ])
-    if(!channel.length){
-        throw new ApiError(400,"Error while getting channel")
+    if (!channel.length) {
+        throw new ApiError(400, "Error while getting channel")
     }
 
     return res.status(200)
-    .json(
-        new ApiResponse(200, channel[0], "user data fetch successfully")
-    )
+        .json(
+            new ApiResponse(200, channel[0], "user data fetch successfully")
+        )
 })
 
 const getWatchHistory = asyncHandler(async (req, res, next) => {
+    const history = await User.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(req.user?._id)
+            }
+        },
+        {
+            $lookup: {
+                from: "videos",
+                as: "history",
+                localField: "watchHistory",
+                foreignField: "_id",
+                pipeline:[
+                    {
+                        $lookup:{
+                            from: "users",
+                            as: "getusers",
+                            localField: "owner",
+                            foreignField: "_id"
+                        },
+                        pipeline:[
+                            {
+                                $project:{
+                                    fullName: 1,
+                                    avatar: 1,
+                                    userName: 1,
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        $addFields:{
+                            owner:{
+                                $first: "$getusers"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ])
 
+    retrun res.status(200).json(
+        new ApiResponse(200, history[0].watchHistory, "watch history is fetch successfully")
+    )
 })
 
 export {
