@@ -2,9 +2,8 @@ import { Comment } from "../models/comment.model.js";
 import { asyncHandler } from "../utils/asyncHandeler.js";
 import { ApiError } from "../utils/ApiError.js";
 import mongoose from "mongoose";
-import { ApiResponse } from "../utils/ApiResponse";
-import { User } from "../models/user.model.js";
-import { Video } from "../models/video.model.js"
+import { ApiResponse } from "../utils/ApiResponse.js";
+import {Video} from "../models/video.model.js"
 
 const getVideoComments = asyncHandler(async (req, res, next) => {
     const { videoId } = req?.params
@@ -103,15 +102,58 @@ const addComment = asyncHandler(async (req, res, next) => {
     )
 })
 
-
-
 const updateComment = asyncHandler(async (req, res, next) => {
+    const {commentId} = req?.params
+    const userId = req.user?._id
+    const {content} = req.body
+    
+    if (!content?.trim()) {
+        throw new ApiError(400, "Content required")
+    }
 
+    const commentUpdated = await Comment.findByIdAndUpdate(
+        {
+            _id: commentId,
+            owner: userId
+        },
+        {
+            $set:{
+                content: content.trim()
+            }
+        },
+        {
+            new: true
+        }
+    )
+
+    if(!commentUpdated){
+        throw new ApiError(400, "Comment not updated")
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, commentUpdated, "Comment updated successfully")
+    )
 })
 
-
 const deleteComment = asyncHandler(async (req, res, next) => {
+    const {commentId} = req.params
+    const userId = req.user?._id
 
+    if(!commentId){
+        throw new ApiError(400, "Invalid Comment ID")
+    }
+
+    const isCommentDelete = await Comment.findOneAndDelete({
+        _id: mongoose.Types.ObjectId(commentId),
+        owner: userId
+    })
+    if(!isCommentDelete){
+        throw new ApiError(400,"Comment not deleted")
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, {}, "comment successfully deleted")
+    )
 })
 
 export {
