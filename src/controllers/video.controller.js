@@ -2,6 +2,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandeler.js";
 import { Video } from "../models/video.model.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
@@ -26,10 +27,6 @@ const getAllVideos = asyncHandler(async (req, res) => {
                 title: query ? {
                     $regex: query,
                     $options: 'i' 
-                    // 'i' case-insensitive
-                    // 'm' multiline match
-                    // 'x' ignore whitespace
-                    // 's' allows dot to match newlines
                 } : { $exists: true } //return all video if query doesnt match
             }
         },
@@ -83,6 +80,41 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
 })
 
+const publishAVideo = asyncHandler(async (req, res)=>{
+    const {title, description} = req.body
+    const userId = req.user?._id
+
+    const videoLocalPath = req.files?.video[0]?.path
+    const thumbnailsLocalPath = req.files?.thumbnails[0]?.path
+
+    if(!videoLocalPath){
+        throw new ApiError(400,"Video is not in localpath")
+    }
+
+    const videoCloudPath = await uploadOnCloudinary(videoLocalPath)
+    const thumbnailsCloudPath = await uploadOnCloudinary(thumbnailsLocalPath)
+
+    const publish = await Video.create({
+        videoFile: videoCloudPath.url,
+        thumbnails: thumbnailsCloudPath.url || "",
+        owner: userId,
+        title: title,
+        description: description,
+        duration: videoCloudPath.duration,
+        views: 0,
+        isPublish: true
+    })
+
+    if(!publish){
+        throw new ApiError(400,"video not publish")
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, publish, "video publish successfully")
+    )
+})
+
 export {
-    getAllVideos
+    getAllVideos,
+    publishAVideo
 }
