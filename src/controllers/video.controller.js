@@ -171,7 +171,74 @@ const getVideoById = asyncHandler(async (req, res) => {
     )
 })
 
+const updateVideo = asyncHandler(async (req, res) => {
+    const { videoId } = req.params
+    const { title, description } = req.body
+    const userId = req.user?._id
+    if (!title?.trim() || !description?.trim()) {
+        throw new ApiError(400, "some data is messing")
+    }
+
+
+    const { videoFile } = req.files[0]?.videoFile?.path
+    const { thumbnails } = req.files[0]?.thumbnails?.path
+
+
+    const uploaded = await uploadOnCloudinary(videoFile)
+    if(!uploaded){
+        throw new ApiError(400,"video not uploaded")
+    }
+    const uploadedThumblails = await uploadOnCloudinary(thumbnails)
+    if(!uploadedThumblails){
+        throw new ApiError(400,"video not uploaded")
+    }
+    
+
+    const result = await Video.findOneAndUpdate(
+        {
+            _id: videoId,
+            owner: userId
+        },
+         {
+        videoFile: uploaded,
+        thumbnails: uploadedThumblails,
+        title: title?.trim(),
+        description: description?.trim()
+    },
+        {
+            new: true
+        }
+    )
+    if (!result) {
+        throw new ApiError(400, "video not updated")
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, result, "video updated successfully")
+    )
+})
+
+const deleteVideo = asyncHandler(async (req, res)=>{
+    const {videoId} = req?.params
+    const userId = req.user?._id
+
+    const deleteVideo = await Video.findOneAndDelete({
+        owner: userId,
+        _id: videoId
+    })
+    if(!deleteVideo){
+        throw new ApiError(400,"video not delete")
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200,{},"video delete successfully")
+    )
+})
+
 export {
     getAllVideos,
-    publishAVideo
+    publishAVideo,
+    getVideoById,
+    updateVideo,
+    deleteVideo
 }
