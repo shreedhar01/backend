@@ -185,26 +185,28 @@ const updateVideo = asyncHandler(async (req, res) => {
 
 
     const uploaded = await uploadOnCloudinary(videoFile)
-    if(!uploaded){
-        throw new ApiError(400,"video not uploaded")
+    if (!uploaded) {
+        throw new ApiError(400, "video not uploaded")
     }
     const uploadedThumblails = await uploadOnCloudinary(thumbnails)
-    if(!uploadedThumblails){
-        throw new ApiError(400,"video not uploaded")
+    if (!uploadedThumblails) {
+        throw new ApiError(400, "video not uploaded")
     }
-    
+
 
     const result = await Video.findOneAndUpdate(
         {
             _id: videoId,
             owner: userId
         },
-         {
-        videoFile: uploaded,
-        thumbnails: uploadedThumblails,
-        title: title?.trim(),
-        description: description?.trim()
-    },
+        {
+            $set: {
+                videoFile: uploaded,
+                thumbnails: uploadedThumblails,
+                title: title?.trim(),
+                description: description?.trim()
+            }
+        },
         {
             new: true
         }
@@ -218,20 +220,46 @@ const updateVideo = asyncHandler(async (req, res) => {
     )
 })
 
-const deleteVideo = asyncHandler(async (req, res)=>{
-    const {videoId} = req?.params
+const deleteVideo = asyncHandler(async (req, res) => {
+    const { videoId } = req?.params
     const userId = req.user?._id
 
     const deleteVideo = await Video.findOneAndDelete({
         owner: userId,
         _id: videoId
     })
-    if(!deleteVideo){
-        throw new ApiError(400,"video not delete")
+    if (!deleteVideo) {
+        throw new ApiError(400, "video not delete")
     }
 
     return res.status(200).json(
-        new ApiResponse(200,{},"video delete successfully")
+        new ApiResponse(200, {}, "video delete successfully")
+    )
+})
+
+const togglePublishStatus = asyncHandler(async (req, res) => {
+    const { videoId } = req.params
+    const userId = req.user?._id
+
+    const statusUpdated =await Video.aggregate([
+        {
+            $match:{
+                _id: videoId,
+                owner: userId
+            }
+        },
+        {
+            $set:{
+                isPublish:  {$not: "$isPublish"}
+            }
+        }
+    ])
+    if (!statusUpdated) {
+        throw new ApiError(400, "publish is not change")
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, statusUpdated[0], "isPublish toggle successfully")
     )
 })
 
@@ -240,5 +268,6 @@ export {
     publishAVideo,
     getVideoById,
     updateVideo,
-    deleteVideo
+    deleteVideo,
+    togglePublishStatus
 }
