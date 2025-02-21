@@ -179,15 +179,7 @@ const updateVideo = asyncHandler(async (req, res) => {
         throw new ApiError(400, "some data is messing")
     }
 
-
-    const { videoFile } = req.files[0]?.videoFile?.path
     const { thumbnails } = req.files[0]?.thumbnails?.path
-
-
-    const uploaded = await uploadOnCloudinary(videoFile)
-    if (!uploaded) {
-        throw new ApiError(400, "video not uploaded")
-    }
     const uploadedThumblails = await uploadOnCloudinary(thumbnails)
     if (!uploadedThumblails) {
         throw new ApiError(400, "video not uploaded")
@@ -201,7 +193,6 @@ const updateVideo = asyncHandler(async (req, res) => {
         },
         {
             $set: {
-                videoFile: uploaded,
                 thumbnails: uploadedThumblails,
                 title: title?.trim(),
                 description: description?.trim()
@@ -221,7 +212,7 @@ const updateVideo = asyncHandler(async (req, res) => {
 })
 
 const deleteVideo = asyncHandler(async (req, res) => {
-    const { videoId } = req?.params
+    const { videoId } = req.params
     const userId = req.user?._id
 
     const deleteVideo = await Video.findOneAndDelete({

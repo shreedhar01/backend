@@ -19,20 +19,23 @@ const toggleVideoLike = asyncHandler(async (req, res)=>{
         _id: likeId,
         likedby: userId
     })
-    if(likeExist){
-        return res.status(200).json(
-            new ApiResponse(200, {}, "video is disliked")
-        )
-    }else{
+    if(!likeExist){
         const likeCreated = await Like.create({
             likedby:userId,
             video: videoId
         })
+        if(!likeCreated){
+            throw new ApiError(400,"like was not created")
+        }
 
         return res.status(200).json(
             new ApiResponse(200, likeCreated, "video is liked")
         )
     }
+
+    return res.status(200).json(
+        new ApiResponse(200, {}, "video is disliked")
+    )
 })
 
 export {
