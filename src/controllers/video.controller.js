@@ -22,7 +22,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
         sort: { [sortBy]: sortType.toLowerCase() === "desc" ? -1 : 1 }
     }
 
-    const videoAggregation = await Video.aggregate([
+    const videoAggregation = Video.aggregate([
         {
             $match: {
                 title: query ? {
@@ -175,15 +175,17 @@ const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     const { title, description } = req.body
     const userId = req.user?._id
+    console.log(title);
+    
     if (!title?.trim() || !description?.trim()) {
         throw new ApiError(400, "some data is messing")
     }
 
-    const { thumbnails } = req.files[0]?.thumbnails?.path
-    const uploadedThumblails = await uploadOnCloudinary(thumbnails)
-    if (!uploadedThumblails) {
-        throw new ApiError(400, "video not uploaded")
-    }
+    // const { thumbnails } = req.files[0]?.thumbnails?.path
+    // const uploadedThumblails = await uploadOnCloudinary(thumbnails)
+    // if (!uploadedThumblails) {
+    //     throw new ApiError(400, "video not uploaded")
+    // }
 
 
     const result = await Video.findOneAndUpdate(
@@ -193,7 +195,7 @@ const updateVideo = asyncHandler(async (req, res) => {
         },
         {
             $set: {
-                thumbnails: uploadedThumblails,
+                // thumbnails: uploadedThumblails,
                 title: title?.trim(),
                 description: description?.trim()
             }
@@ -235,8 +237,8 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     const statusUpdated =await Video.aggregate([
         {
             $match:{
-                _id: videoId,
-                owner: userId
+                _id:new mongoose.Types.ObjectId(videoId),
+                owner: new mongoose.Types.ObjectId(userId)
             }
         },
         {
