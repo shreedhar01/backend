@@ -2,7 +2,6 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandeler.js";
 import { Like } from "../models/likes.model.js";
-import mongoose from "mongoose";
 import { Video } from "../models/video.model.js";
 import { Comment } from "../models/comment.model.js";
 
@@ -56,22 +55,50 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
     if (!unlike) {
         const like = await Like.create({
             likedby: userId,
-            comment: commentId, 
+            comment: commentId,
         })
-        if(!like){
-            throw new ApiError(400,"like not created")
+        if (!like) {
+            throw new ApiError(400, "like not created")
         }
         return res.status(200).json(
             new ApiResponse(200, like, "like created")
         )
     }
-    
+
     return res.status(200).json(
-        new ApiResponse(200,{},"successfully dislike")
+        new ApiResponse(200, {}, "successfully dislike")
+    )
+})
+
+const toggleTweetLike = asyncHandler(async (req, res) => {
+    const userId = req.user?._id
+    const { likeId } = req.query
+    const { tweetId } = req.params
+
+    const dislike = await Like.findOne({
+        _id: likeId,
+        likedby: userId
+    })
+    if(!dislike){
+        const createLike = await Like.create({
+            likedby: userId,
+            tweet: tweetId
+        })
+        if(!createLike){
+            throw new ApiError(400,"like not created")
+        }
+        return res.status(200).json(
+            new ApiResponse(200,createLike,"tweet is successfully like")
+        )
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200,{},"tweet successfully dislike")
     )
 })
 
 export {
     toggleVideoLike,
-    toggleCommentLike
+    toggleCommentLike,
+    toggleTweetLike
 }
