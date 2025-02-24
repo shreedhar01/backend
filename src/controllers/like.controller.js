@@ -4,6 +4,7 @@ import { asyncHandler } from "../utils/asyncHandeler.js";
 import { Like } from "../models/likes.model.js";
 import { Video } from "../models/video.model.js";
 import { Comment } from "../models/comment.model.js";
+import mongoose from "mongoose";
 
 const toggleVideoLike = asyncHandler(async (req, res) => {
     const { likeId } = req.query
@@ -79,26 +80,83 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
         _id: likeId,
         likedby: userId
     })
-    if(!dislike){
+    if (!dislike) {
         const createLike = await Like.create({
             likedby: userId,
             tweet: tweetId
         })
-        if(!createLike){
-            throw new ApiError(400,"like not created")
+        if (!createLike) {
+            throw new ApiError(400, "like not created")
         }
         return res.status(200).json(
-            new ApiResponse(200,createLike,"tweet is successfully like")
+            new ApiResponse(200, createLike, "tweet is successfully like")
         )
     }
 
     return res.status(200).json(
-        new ApiResponse(200,{},"tweet successfully dislike")
+        new ApiResponse(200, {}, "tweet successfully dislike")
+    )
+})
+
+const getLikedVideos = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 10, sortBy, sortType } = req.query
+    const userId = req.user?._id
+
+    if (!['desc', 'asc'].includes(sortType.toLowerCase())) {
+        throw new ApiError(400, 'provide valid sorttype')
+    }
+
+    if (!["createdAt", "views", "title"].includes(sortBy.toLowerCase())) {
+        throw new ApiError(400, 'provide valid sorting')
+    }
+
+    const option = {
+        page: page,
+        limit: limit,
+        sort: { [sortBy]: sortType.toLowerCase() === "asc" ? -1 : 1 }
+    }
+
+    const likeVideos = Like.aggregate([
+        {
+            $match: {
+                likedby: new mongoose.Types.ObjectId(userId)
+            }
+        },
+        {
+            $lookup: {
+                from: "videos",
+                as: "videoData",
+                localField: "video",
+                foreignField: "_id"
+            }
+        },
+        {
+            $unwind: "$videoData"
+        }
+    ])
+
+    const result = await Like.aggregatePaginate(likeVideos, option)
+    if (!result) {
+        throw new ApiError(400, "no videos found")
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, {
+            result: result.docs,
+            pagination: {
+                currentPage: result.page,
+                totalVideo: result.totalDocs,
+                totalPages: result.totalPages,
+                hasNextPage: result.hasNextPage,
+                hasPrePage: result.hasPrePage,
+            }
+        }, "videos fetch successfully")
     )
 })
 
 export {
     toggleVideoLike,
     toggleCommentLike,
-    toggleTweetLike
+    toggleTweetLike,
+    getLikedVideos
 }
