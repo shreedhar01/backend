@@ -36,11 +36,11 @@ const createPlaylist = asyncHandler(async (req, res) => {
 
 const getUserPlaylists = asyncHandler(async (req, res) => {
     const userId = req.user?._id
-    const {page=1, limit=10} = req?.query
+    const { page = 1, limit = 10 } = req?.query
 
     const schema = {
         page: Math.max(1, parseInt(page)),
-        limit: Math.max(1, Math.min(parseInt(limit),100))
+        limit: Math.max(1, Math.min(parseInt(limit), 100))
     }
 
     const userPlaylist = Playlists.aggregate([
@@ -50,24 +50,24 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
             }
         },
         {
-            $lookup:{
-                from:"videos",
+            $lookup: {
+                from: "videos",
                 as: "videodetails",
-                localField:"video",
-                foreignField:"_id"
+                localField: "video",
+                foreignField: "_id"
             }
         }
     ])
 
     const result = await Playlists.aggregatePaginate(userPlaylist, schema)
-    if(!result.docs){
-        throw new ApiError(400,"data not get")
+    if (!result.docs) {
+        throw new ApiError(400, "data not get")
     }
 
     return res.status(200).json(
         new ApiResponse(200, {
             data: result.docs,
-            pagination:{
+            pagination: {
                 currentPage: result.page,
                 totalVideo: result.totalDocs,
                 totalPages: result.totalPages,
@@ -78,7 +78,29 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
     )
 })
 
+const getPlaylistById = asyncHandler(async (req, res) => {
+    const { playlistId } = req.params
+    const userId = req.user?._id
+
+    if (!mongoose.isValidObjectId(playlistId)) {
+        throw new ApiError(400, "Invalid playlist ID format")
+    }
+
+    const result = await Playlists.findOne({
+        _id: playlistId,
+        owner: userId
+    })
+    if (!result) {
+        throw new ApiError(404, "playlist not found")
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, result,"playlist fetch successfully")
+    )
+})
+
 export {
     createPlaylist,
-    getUserPlaylists
+    getUserPlaylists,
+    getPlaylistById
 }
