@@ -95,12 +95,47 @@ const getPlaylistById = asyncHandler(async (req, res) => {
     }
 
     return res.status(200).json(
-        new ApiResponse(200, result,"playlist fetch successfully")
+        new ApiResponse(200, result, "playlist fetch successfully")
+    )
+})
+
+const addVideoToPlaylist = asyncHandler(async (req, res) => {
+    const { playlistId } = req?.params
+    const userId = req.user?._id
+    const { videoId } = req.query
+
+    if (!mongoose.ObjectId.isValid(playlistId) || !mongoose.ObjectId.isValid(videoId)) {
+        throw new ApiError(400, "id is not valid")
+    }
+
+    const videoExist = await Video.findById(videoId)
+    if(!videoExist){
+        throw new ApiError(400,"video doesnt exist")
+    }
+
+    const addVideo = await Playlists.findOneAndUpdate(
+        {
+            _id: playlistId,
+            owner: userId
+        },
+        {
+            $addToSet:{ video: videoId }
+        },
+        {
+            new: true
+        }
+    )
+    if(!addVideo){
+        throw new ApiError(400,"video not added to playlist")
+    }
+    return res.status(200).json(
+        new ApiResponse(200,addVideo,"video added successfully")
     )
 })
 
 export {
     createPlaylist,
     getUserPlaylists,
-    getPlaylistById
+    getPlaylistById,
+    addVideoToPlaylist
 }
