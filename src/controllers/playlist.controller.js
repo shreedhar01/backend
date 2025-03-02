@@ -133,9 +133,52 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
     )
 })
 
+const removeVideoFromPlaylist = asyncHandler(async (req, res)=>{
+    const userId = req.user._id
+    const {playlistId} = req.params
+    const {videoId} = req.query
+
+    if(!mongoose.ObjectId.isValid(playlistId) || !mongoose.ObjectId.isValid(videoId)){
+        throw new ApiError(400,"provide valid ids")
+    }
+
+    const isVideoExist = await Video.findById(videoId)
+    if(!isVideoExist){
+        throw new ApiError(404,"video doesnt exist")
+    }
+
+    const isPlaylistExist = await Playlists.findOne({
+        _id: playlistId,
+        owner: userId
+    })
+    if(!isPlaylistExist){
+        throw new ApiError(404,"playlist doesnt exist")
+    }
+    const updatePlaylist = await Playlists.findOneAndUpdate(
+        {
+            _id: playlistId,
+            owner: userId
+        },
+        {
+            $pull:{video: videoId}
+        },
+        {
+            new: true
+        }
+    )
+    if(!updatePlaylist){
+        throw new ApiError(400,"video not remove from playlist")
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200,updatePlaylist,"video removed form playlist")
+    )
+})
+
 export {
     createPlaylist,
     getUserPlaylists,
     getPlaylistById,
-    addVideoToPlaylist
+    addVideoToPlaylist,
+    removeVideoFromPlaylist,
 }
