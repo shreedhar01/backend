@@ -104,7 +104,7 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
     const userId = req.user?._id
     const { videoId } = req.query
 
-    if (!mongoose.ObjectId.isValid(playlistId) || !mongoose.ObjectId.isValid(videoId)) {
+    if (!mongoose.ObjectIdisValid(playlistId) || !mongoose.ObjectIdisValid(videoId)) {
         throw new ApiError(400, "id is not valid")
     }
 
@@ -138,7 +138,7 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res)=>{
     const {playlistId} = req.params
     const {videoId} = req.query
 
-    if(!mongoose.ObjectId.isValid(playlistId) || !mongoose.ObjectId.isValid(videoId)){
+    if(!mongoose.ObjectIdisValid(playlistId) || !mongoose.ObjectIdisValid(videoId)){
         throw new ApiError(400,"provide valid ids")
     }
 
@@ -175,10 +175,32 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res)=>{
     )
 })
 
+const deletePlaylist = asyncHandler(async (req, res)=>{
+    const userId = req.user._id;
+    const {playlistId} = req?.params
+
+    if(!mongoose.Types.ObjectId.isValid(playlistId)){
+        throw new ApiError(400,"give valid playlist id")
+    }
+
+    const deleteIt = await Playlists.findOneAndDelete({
+        _id : playlistId,
+        owner: userId
+    })
+
+    if(!deleteIt){
+        throw new ApiError(404,"playlist not found")
+    }
+    return res.status(200).json(
+        new ApiResponse(200,{},"playlist removed successfully")
+    )
+})
+
 export {
     createPlaylist,
     getUserPlaylists,
     getPlaylistById,
     addVideoToPlaylist,
     removeVideoFromPlaylist,
+    deletePlaylist,
 }
