@@ -7,7 +7,7 @@ import mongoose from "mongoose";
 
 const createPlaylist = asyncHandler(async (req, res) => {
     const userId = req.user?._id
-    const { videoId } = req?.params
+    const { videoId } = req?.query
     const { name, description } = req?.body
 
     if (!name?.trim() || !description?.trim()) {
@@ -104,7 +104,7 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
     const userId = req.user?._id
     const { videoId } = req.query
 
-    if (!mongoose.ObjectIdisValid(playlistId) || !mongoose.ObjectIdisValid(videoId)) {
+    if (!new mongoose.Types.ObjectId(playlistId) || !new mongoose.Types.ObjectId(videoId)) {
         throw new ApiError(400, "id is not valid")
     }
 
@@ -138,7 +138,7 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res)=>{
     const {playlistId} = req.params
     const {videoId} = req.query
 
-    if(!mongoose.ObjectIdisValid(playlistId) || !mongoose.ObjectIdisValid(videoId)){
+    if(!new mongoose.Types.ObjectId(playlistId) || !new mongoose.Types.ObjectId(videoId)){
         throw new ApiError(400,"provide valid ids")
     }
 
@@ -179,7 +179,7 @@ const deletePlaylist = asyncHandler(async (req, res)=>{
     const userId = req.user._id;
     const {playlistId} = req?.params
 
-    if(!mongoose.Types.ObjectId.isValid(playlistId)){
+    if(!new mongoose.Types.ObjectId(playlistId)){
         throw new ApiError(400,"give valid playlist id")
     }
 
@@ -196,6 +196,45 @@ const deletePlaylist = asyncHandler(async (req, res)=>{
     )
 })
 
+const updatePlaylist = asyncHandler(async (req, res) => {
+    const userId = req.user._id;
+    const {playlistId} = req.params;
+    const {name, description} = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(playlistId)) {
+        throw new ApiError(400, "Invalid playlist ID format");
+    }
+
+    if (!name?.trim() && !description?.trim()) {
+        throw new ApiError(400, "At least one field (name or description) is required for update");
+    }
+
+    const updateFields = {};
+    if (name?.trim()) updateFields.name = name.trim();
+    if (description?.trim()) updateFields.description = description.trim();
+
+    const updatedPlaylist = await Playlists.findOneAndUpdate(
+        {
+            _id: playlistId,
+            owner: userId
+        },
+        {
+            $set: updateFields
+        },
+        {
+            new: true
+        }
+    );
+
+    if (!updatedPlaylist) {
+        throw new ApiError(404, "Playlist not found or you don't have permission to update");
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, updatedPlaylist, "Playlist updated successfully")
+    );
+});
+
 export {
     createPlaylist,
     getUserPlaylists,
@@ -203,4 +242,5 @@ export {
     addVideoToPlaylist,
     removeVideoFromPlaylist,
     deletePlaylist,
+    updatePlaylist
 }
