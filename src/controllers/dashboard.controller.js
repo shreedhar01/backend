@@ -75,6 +75,49 @@ const getChannelStats = asyncHandler(async (req, res)=>{
     )
 })
 
+//all the videos uploaded by the channel
+const getChannelVideos = asyncHandler(async (req, res)=>{
+    const {channelId} = req.params
+    const { page = 1, limit = 10 } = req.query
+
+    if(!mongoose.isValidObjectId(channelId)){
+        throw new ApiError(400,"not a valid channel id")
+    }
+
+    const option = {
+        page: Math.max(1, parseInt(page)),
+        limit: Math.max(1, Math.min(parseInt(limit), 100))
+    }
+
+    const allVideo = Video.aggregate([
+        {
+            $match:{
+                owner : new mongoose.Types.ObjectId(channelId)
+            }
+        }
+    ])
+
+    const result = await Video.aggregatePaginate(allVideo, option)
+
+    if(!result.docs){
+        throw new ApiError(404,"videos not found")
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, {
+            result: result.docs,
+            pagination: {
+                currentPage: result.page,
+                totalVideo: result.totalDocs,
+                totalPages: result.totalPages,
+                hasNextPage: result.hasNextPage,
+                hasPrePage: result.hasPrePage,
+            }
+        }, 'video fetch successfully')
+    )
+})
+
 export {
     getChannelStats,
+    getChannelVideos
 }
